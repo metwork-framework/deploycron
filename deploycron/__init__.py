@@ -42,12 +42,18 @@ def deploycron(filename="", content="", override=False):
     _install_content(installed_content)
 
 
-def undeploycron_between(start_line, stop_line):
+def undeploycron_between(start_line, stop_line, occur_start=1, occur_stop=1):
     """uninstall crontab parts between two lines (included).
     If the start_line or the stop_line is not found into the installed crontab,
     it won't be modified.
-    start_line - start line to delimit the crontab block to remove
-    stop_line - stop line to delimit the crontab block to remove
+    `start_line` - start crontab line (the actual line, not the line number)
+    to delimit the crontab block to remove
+    `stop_line` - stop crontab line (the actual line, not the line number)
+    to delimit the crontab block to remove
+    `occur_start` - nth occurence you want to consider as start_line (ex :
+    choose 2 if you want the 2nd occurence to be chosen as start_line)
+    `occur_stop` - nth occurence you want to consider as stop_line (ex :
+    choose 2 if you want the 2nd occurence to be chosen as stop_line)
     """
     lines_installed = [x.strip() for x in
                        _get_installed_content().splitlines()]
@@ -57,16 +63,38 @@ def undeploycron_between(start_line, stop_line):
         return False
     if stop_line not in lines_installed:
         return False
-    between = False
+    if occur_start is None or occur_start <= 0:
+        return False
+    if occur_stop is None or occur_stop <= 0:
+        return False
+
+    # Check if stop_line is before start_line by getting their indices
+    index_start = -1
+    index_stop = -1
+    try:
+        # Find the occurence we are interested in
+        for j in range(occur_start):
+            index_start = lines_installed.index(start_line, index_start + 1)
+    except ValueError:
+        # If the occurence number is too high (nth occurrence not found)
+        return False
+    try:
+        for j in range(occur_stop):
+            index_stop = lines_installed.index(stop_line, index_stop + 1)
+    except ValueError:
+        return False
+
+    # If stop is before start, we switch them
+    if index_stop < index_start:
+        buffer_var = index_start
+        index_start = index_stop
+        index_stop = buffer_var
+
     lines_to_install = []
-    for cronline in lines_installed:
-        if not between and start_line == cronline:
-            between = True
-        elif between and stop_line == cronline:
-            between = False
-        else:
-            if not between:
-                lines_to_install.append(cronline)
+    for i in range(len(lines_installed)):
+        if i < index_start or i > index_stop:
+            lines_to_install.append(lines_installed[i])
+
     if len(lines_to_install) > 0:
         lines_to_install.append("")
     content_to_install = "\n".join(lines_to_install)
