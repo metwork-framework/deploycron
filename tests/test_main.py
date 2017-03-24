@@ -4,7 +4,37 @@
 import unittest
 import subprocess
 from getpass import getuser
-from deploycron import deploycron, undeploycron_between
+from deploycron import deploycron, undeploycron_between, \
+    _get_installed_content, _install_content
+
+
+def deploycron_duplicates(filename="", content="", override=False):
+    """Same as deploycron but can add duplicates for testing purpose"""
+
+    if not filename and not content:
+        raise ValueError("neither filename or crontab must be specified")
+
+    if filename:
+        try:
+            with open(filename, 'r') as f:
+                content = f.read()
+        except Exception as e:
+            raise ValueError("cannot open the file: %s" % str(e))
+    if override:
+        installed_content = ""
+    else:
+        installed_content = _get_installed_content()
+        installed_content = installed_content.rstrip("\n")
+    for crontab in content.split("\n"):
+        if crontab:
+            if not installed_content:
+                installed_content += crontab
+            else:
+                installed_content += "\n%s" % crontab
+    if installed_content:
+        installed_content += "\n"
+    # install back
+    _install_content(installed_content)
 
 
 class MainTestCase(unittest.TestCase):
@@ -31,6 +61,11 @@ class MainTestCase(unittest.TestCase):
         subprocess.call(["rm /tmp/test_filename"], shell=True)
         self.assertEqual(file_content, "* * * * * echo file > /tmp/buffer\n")
 
+    def test_deploy_filename_error(self):
+        # file doesn't exist
+        with self.assertRaises(Exception):
+            deploycron(filename="/tmp/idonotexist.tab")
+
     def test_deploy_content(self):
         # specify content
         deploycron(content="* * * * * echo hello > /tmp/buffer")
@@ -52,6 +87,17 @@ class MainTestCase(unittest.TestCase):
         self.assertEqual(file_content, "* * * * * echo greetings > "
                          "/tmp/buffer\n")
 
+    def test_deploy_duplicates(self):
+        # duplicates are not added
+        deploycron(content="* * * * * echo greetings > /tmp/buffer")
+        deploycron(content="* * * * * echo greetings > /tmp/buffer")
+        subprocess.call(["crontab -l > /tmp/test_crontab"], shell=True)
+        with open("/tmp/test_crontab") as f:
+            file_content = f.read()
+        subprocess.call(["rm /tmp/test_crontab"], shell=True)
+        self.assertEqual(file_content, "* * * * * echo greetings > "
+                         "/tmp/buffer\n")
+
     def test_undeploy(self):
         # remove cron instructions
         deploycron(content="* * * * * echo Good > /tmp/buffer")
@@ -66,6 +112,157 @@ class MainTestCase(unittest.TestCase):
             file_content = f.read()
         subprocess.call(["rm /tmp/test_undeploy"], shell=True)
         self.assertEqual(file_content, "* * * * * echo Good > /tmp/buffer\n")
+
+    def test_undeploy_start_not_found(self):
+        # start_line is not found
+        deploycron(content="* * * * * echo Good > /tmp/buffer")
+        deploycron(content="* * * * * echo day > /tmp/buffer")
+        deploycron(content="* * * * * echo to > /tmp/buffer")
+        deploycron(content="* * * * * echo you > /tmp/buffer")
+        deploycron(content="* * * * * echo mate > /tmp/buffer")
+        undeploycron_between("* * * * * echo not_found > /tmp/buffer",
+                             "* * * * * echo mate > /tmp/buffer")
+        result = subprocess.call(["crontab -l > /tmp/test_undeploy"],
+                                 shell=True)
+        subprocess.call(["rm /tmp/test_undeploy"], shell=True)
+        self.assertFalse(result)
+
+    def test_undeploy_stop_not_found(self):
+        # stop_line is not found
+        deploycron(content="* * * * * echo Good > /tmp/buffer")
+        deploycron(content="* * * * * echo day > /tmp/buffer")
+        deploycron(content="* * * * * echo to > /tmp/buffer")
+        deploycron(content="* * * * * echo you > /tmp/buffer")
+        deploycron(content="* * * * * echo mate > /tmp/buffer")
+        undeploycron_between("* * * * * echo day > /tmp/buffer",
+                             "* * * * * echo not_found > /tmp/buffer")
+        result = subprocess.call(["crontab -l > /tmp/test_undeploy"],
+                                 shell=True)
+        self.assertFalse(result)
+        subprocess.call(["rm /tmp/test_undeploy"], shell=True)
+
+    def test_undeploy_inverted_indices(self):
+        # stop_line is before start_line in the parameters
+        deploycron(content="* * * * * echo Good > /tmp/buffer")
+        deploycron(content="* * * * * echo day > /tmp/buffer")
+        deploycron(content="* * * * * echo to > /tmp/buffer")
+        deploycron(content="* * * * * echo you > /tmp/buffer")
+        deploycron(content="* * * * * echo mate > /tmp/buffer")
+        undeploycron_between("* * * * * echo mate > /tmp/buffer",
+                             "* * * * * echo day > /tmp/buffer")
+        subprocess.call(["crontab -l > /tmp/test_undeploy"], shell=True)
+        with open("/tmp/test_undeploy") as f:
+            file_content = f.read()
+        subprocess.call(["rm /tmp/test_undeploy"], shell=True)
+        self.assertEqual(file_content, "* * * * * echo Good > /tmp/buffer\n")
+
+    def test_undeploy_2_occur_start(self):
+        # remove where there are multiple occurences of start_line
+        deploycron(content="* * * * * echo Good > /tmp/buffer")
+        deploycron_duplicates(content="* * * * * echo Good > /tmp/buffer")
+        deploycron_duplicates(content="* * * * * echo Good > /tmp/buffer")
+        deploycron(content="* * * * * echo day > /tmp/buffer")
+        deploycron(content="* * * * * echo to > /tmp/buffer")
+        deploycron(content="* * * * * echo you > /tmp/buffer")
+        deploycron(content="* * * * * echo mate > /tmp/buffer")
+        undeploycron_between("* * * * * echo Good > /tmp/buffer",
+                             "* * * * * echo mate > /tmp/buffer",
+                             2)
+        subprocess.call(["crontab -l > /tmp/test_undeploy"], shell=True)
+        with open("/tmp/test_undeploy") as f:
+            file_content = f.read()
+        subprocess.call(["rm /tmp/test_undeploy"], shell=True)
+        print(file_content)
+        self.assertEqual(file_content, "* * * * * echo Good > /tmp/buffer\n")
+
+    def test_undeploy_2_occur_stop(self):
+        # remove where there are multiple occurences of stop_line
+        deploycron(content="* * * * * echo Good > /tmp/buffer")
+        deploycron(content="* * * * * echo day > /tmp/buffer")
+        deploycron(content="* * * * * echo to > /tmp/buffer")
+        deploycron(content="* * * * * echo you > /tmp/buffer")
+        deploycron_duplicates(content="* * * * * echo you > /tmp/buffer")
+        deploycron(content="* * * * * echo mate > /tmp/buffer")
+        undeploycron_between("* * * * * echo Good > /tmp/buffer",
+                             "* * * * * echo you > /tmp/buffer",
+                             1,
+                             2)
+        subprocess.call(["crontab -l > /tmp/test_undeploy"], shell=True)
+        with open("/tmp/test_undeploy") as f:
+            file_content = f.read()
+        subprocess.call(["rm /tmp/test_undeploy"], shell=True)
+        self.assertEqual(file_content, "* * * * * echo mate > /tmp/buffer\n")
+
+    def test_undeploy_2_occur_start_error(self):
+        # start_line occurence not found
+        deploycron(content="* * * * * echo Good > /tmp/buffer")
+        deploycron(content="* * * * * echo day > /tmp/buffer")
+        deploycron(content="* * * * * echo to > /tmp/buffer")
+        deploycron(content="* * * * * echo you > /tmp/buffer")
+        deploycron(content="* * * * * echo mate > /tmp/buffer")
+        self.assertFalse(undeploycron_between("* * * * * echo Good > "
+                                              "/tmp/buffer",
+                                              "* * * * * echo mate > "
+                                              "/tmp/buffer",
+                                              2))
+        subprocess.call(["rm /tmp/test_undeploy"], shell=True)
+
+    def test_undeploy_2_occur_stop_error(self):
+        # stop_line occurence not found
+        deploycron(content="* * * * * echo Good > /tmp/buffer")
+        deploycron(content="* * * * * echo day > /tmp/buffer")
+        deploycron(content="* * * * * echo to > /tmp/buffer")
+        deploycron(content="* * * * * echo you > /tmp/buffer")
+        deploycron(content="* * * * * echo mate > /tmp/buffer")
+        self.assertFalse(undeploycron_between("* * * * * echo Good > "
+                                              "/tmp/buffer",
+                                              "* * * * * echo mate > "
+                                              "/tmp/buffer",
+                                              1,
+                                              2))
+        subprocess.call(["rm /tmp/test_undeploy"], shell=True)
+
+    def test_undeploy_wrong_occur_start(self):
+        # invalid parameter
+        deploycron(content="* * * * * echo Good > /tmp/buffer")
+        deploycron(content="* * * * * echo day > /tmp/buffer")
+        self.assertFalse(undeploycron_between("* * * * * echo Good > "
+                                              "/tmp/buffer",
+                                              "* * * * * echo day > "
+                                              "/tmp/buffer",
+                                              0))
+
+    def test_undeploy_none_occur_start(self):
+        # invalid parameter
+        deploycron(content="* * * * * echo Good > /tmp/buffer")
+        deploycron(content="* * * * * echo day > /tmp/buffer")
+        self.assertFalse(undeploycron_between("* * * * * echo Good > "
+                                              "/tmp/buffer",
+                                              "* * * * * echo day > "
+                                              "/tmp/buffer",
+                                              None))
+
+    def test_undeploy_wrong_occur_stop(self):
+        # invalid parameter
+        deploycron(content="* * * * * echo Good > /tmp/buffer")
+        deploycron(content="* * * * * echo day > /tmp/buffer")
+        self.assertFalse(undeploycron_between("* * * * * echo Good > "
+                                              "/tmp/buffer",
+                                              "* * * * * echo day > "
+                                              "/tmp/buffer",
+                                              1,
+                                              0))
+
+    def test_undeploy_none_occur_stop(self):
+        # invalid parameter
+        deploycron(content="* * * * * echo Good > /tmp/buffer")
+        deploycron(content="* * * * * echo day > /tmp/buffer")
+        self.assertFalse(undeploycron_between("* * * * * echo Good > "
+                                              "/tmp/buffer",
+                                              "* * * * * echo day > "
+                                              "/tmp/buffer",
+                                              1,
+                                              None))
 
     def test_deploy_argparse(self):
         subprocess.call(["echo '* * * * * echo argparse > /tmp/buffer' > "
