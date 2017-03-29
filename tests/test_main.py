@@ -4,13 +4,14 @@
 import unittest
 import subprocess
 import os.path
+from getpass import getuser
 from deploycron import deploycron, undeploycron_between
 
 class MainTestCase(unittest.TestCase):
 
     def tearDown(self):
-        subprocess.call(["rm /tmp/buffer"], shell=True)
-        subprocess.call(["sudo crontab -u florian -l | grep -v '* * * * * echo [a-zA-z0-9] > /tmp/'  | sudo crontab -u florian -"], shell=True)
+        #subprocess.call(["rm /tmp/buffer"], shell=True)
+        subprocess.call(["sudo crontab -u " + getuser() + " -l | grep -v '* * * * * echo [a-zA-z0-9] > /tmp/'  | sudo crontab -u " + getuser() + " -"], shell=True)
 
     def test_deploy_none(self):
         # Nothing specified
@@ -44,6 +45,7 @@ class MainTestCase(unittest.TestCase):
         subprocess.call(["crontab -l > /tmp/test_crontab"], shell=True)
         with open("/tmp/test_crontab") as f:
             file_content = f.read()
+        subprocess.call(["rm /tmp/test_crontab"], shell=True)
         self.assertEqual(file_content, "* * * * * echo greetings > /tmp/buffer\n")
         
     def test_undeploy(self):
@@ -59,7 +61,4 @@ class MainTestCase(unittest.TestCase):
             file_content = f.read()
         subprocess.call(["rm /tmp/test_undeploy"], shell=True)
         self.assertEqual(file_content, "* * * * * echo Good > /tmp/buffer\n")
-        
-        
-        
         
