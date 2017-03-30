@@ -3,15 +3,16 @@
 
 import unittest
 import subprocess
-import os.path
 from getpass import getuser
 from deploycron import deploycron, undeploycron_between
+
 
 class MainTestCase(unittest.TestCase):
 
     def tearDown(self):
-        #subprocess.call(["rm /tmp/buffer"], shell=True)
-        subprocess.call(["sudo crontab -u " + getuser() + " -l | grep -v '* * * * * echo [a-zA-z0-9] > /tmp/'  | sudo crontab -u " + getuser() + " -"], shell=True)
+        subprocess.call(["sudo crontab -u " + getuser() + " -l | grep -v '* * "
+                         "* * * echo [a-zA-z0-9] > /tmp/'  | sudo crontab -u"
+                         " " + getuser() + " -"], shell=True)
 
     def test_deploy_none(self):
         # Nothing specified
@@ -20,7 +21,8 @@ class MainTestCase(unittest.TestCase):
 
     def test_deploy_filename(self):
         # specify a filename with content
-        subprocess.call(["echo '* * * * * echo file > /tmp/buffer' > /tmp/youcrontab.tab"], shell=True)
+        subprocess.call(["echo '* * * * * echo file > /tmp/buffer' > "
+                         "/tmp/youcrontab.tab"], shell=True)
         deploycron(filename="/tmp/youcrontab.tab")
         subprocess.call(["crontab -l > /tmp/test_filename"], shell=True)
         with open("/tmp/test_filename") as f:
@@ -41,13 +43,15 @@ class MainTestCase(unittest.TestCase):
     def test_deploy_override(self):
         # override existing crontab
         deploycron(content="* * * * * echo hello > /tmp/buffer")
-        deploycron(content="* * * * * echo greetings > /tmp/buffer", override=True)
+        deploycron(content="* * * * * echo greetings > /tmp/buffer",
+                   override=True)
         subprocess.call(["crontab -l > /tmp/test_crontab"], shell=True)
         with open("/tmp/test_crontab") as f:
             file_content = f.read()
         subprocess.call(["rm /tmp/test_crontab"], shell=True)
-        self.assertEqual(file_content, "* * * * * echo greetings > /tmp/buffer\n")
-        
+        self.assertEqual(file_content, "* * * * * echo greetings > "
+                         "/tmp/buffer\n")
+
     def test_undeploy(self):
         # remove cron instructions
         deploycron(content="* * * * * echo Good > /tmp/buffer")
@@ -55,7 +59,8 @@ class MainTestCase(unittest.TestCase):
         deploycron(content="* * * * * echo to > /tmp/buffer")
         deploycron(content="* * * * * echo you > /tmp/buffer")
         deploycron(content="* * * * * echo mate > /tmp/buffer")
-        undeploycron_between("* * * * * echo day > /tmp/buffer","* * * * * echo mate > /tmp/buffer")
+        undeploycron_between("* * * * * echo day > /tmp/buffer",
+                             "* * * * * echo mate > /tmp/buffer")
         subprocess.call(["crontab -l > /tmp/test_undeploy"], shell=True)
         with open("/tmp/test_undeploy") as f:
             file_content = f.read()
