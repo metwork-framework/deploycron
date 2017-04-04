@@ -1,5 +1,9 @@
 # deploycron
 
+[![Build Status](https://travis-ci.org/Hawker65/deploycron.svg?branch=master)](https://travis-ci.org/Hawker65/deploycron)
+
+[![Coverage Status](https://coveralls.io/repos/github/Hawker65/deploycron/badge.svg?branch=master)](https://coveralls.io/github/Hawker65/deploycron?branch=master)
+
 A small tool for deploying crontab into your system.
 
 It's useful if you want to deploy some crontab scripts into your system when you deploy your software that contains some extra crontab scripts.
@@ -164,9 +168,13 @@ optional arguments:
 
 Only support in unix-like system, eg. Linux/Mac
 
-## Author
+## Authors
 
 * Monklof (monklof@gmail.com)
+
+* thefab
+
+* Hawker65
 
 ## License
 
