@@ -117,7 +117,7 @@ def _install_content(content):
     retcode, err, out = _runcmd("crontab", content)
     if retcode != 0:
         raise ValueError("failed to install crontab, check if crontab is "
-                         "valid")
+                         "valid ; out=%s ; err=%s" % out, err)
 
 
 def _runcmd(cmd, input=None):
