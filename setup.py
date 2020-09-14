@@ -8,7 +8,7 @@ setup(
     description = ("a small crontab deploy/install tool for python"),
     license = "MIT",
     keywords = "crontab, cron, initialize",
-    url = "https://github.com/monklof/deploycron",
+    url = "https://github.com/metwork-framework/deploycron",
     packages=['deploycron', 'tests'],
     test_suite = 'nose.collector',
     classifiers=[
