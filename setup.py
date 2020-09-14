@@ -3,8 +3,8 @@ from setuptools import setup
 setup(
     name = "deploycron",
     version = "0.0.1",
-    author = "monklof",
-    author_email = "monklof@gmail.com",
+    author = "monklof, Fabien Marty",
+    author_email = "fabien.marty@gmail.com",
     description = ("a small crontab deploy/install tool for python"),
     license = "MIT",
     keywords = "crontab, cron, initialize",
