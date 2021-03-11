@@ -25,12 +25,7 @@ jobs:
         pip install -r test-requirements.txt
     - name: Test with flake8
       run: |
-        make test
+        flake8 .
     - name: Install
       run: |
         python setup.py develop
-    - name: Coverage
-      if: matrix.python-version == '3.7'
-      run: |
-        make coveralls
-        make coverage
