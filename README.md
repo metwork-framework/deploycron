@@ -1,6 +1,6 @@
 # deploycron
 
-[![Build Status](https://travis-ci.org/Hawker65/deploycron.svg?branch=master)](https://travis-ci.org/Hawker65/deploycron)
+[![GitHub CI](https://github.com/metwork-framework/deploycron/workflows/CI/badge.svg?branch=master)](https://github.com/metwork-framework/deploycron/actions?query=workflow%3ACI+branch%3Amaster)
 
 [![Coverage Status](https://coveralls.io/repos/github/Hawker65/deploycron/badge.svg?branch=master)](https://coveralls.io/github/Hawker65/deploycron?branch=master)
 
