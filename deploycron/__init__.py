@@ -114,7 +114,7 @@ def _get_installed_content():
 def _install_content(content):
     """install (replace) the given (multilines) string as new crontab...
     """
-    retcode, err, out = _runcmd("crontab", content)
+    retcode, err, out = _runcmd("crontab -", content)
     if retcode != 0:
         raise ValueError("failed to install crontab, check if crontab is "
                          "valid ; out=%s ; err=%s" % (out, err))
