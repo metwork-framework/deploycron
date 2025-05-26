@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ '3.7', '3.8', '3.9', '3.10', '3.11' ]
+        python-version: [ '3.8', '3.9', '3.10', '3.11', '3.12', '3.13' ]
     steps:
     - uses: actions/checkout@v1
     - name: Set up Python ${{ matrix.python-version }}
@@ -26,6 +26,11 @@ jobs:
     - name: Test with flake8
       run: |
         flake8 .
-    - name: Install
+    - name: install with pip -e
+      if: ${{ matrix.python-version == 3.12 || matrix.python-version == 3.13 }}
+      run: |
+        pip install -e . -v --no-build-isolation
+    - name: install with setup.py develop
+      if: ${{ matrix.python-version != 3.12 && matrix.python-version != 3.13 }}
       run: |
         python setup.py develop
